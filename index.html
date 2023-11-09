@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>位置情報取得</title>
+</head>
+<body>
+    <h1>位置情報の取得</h1>
+    <p id="locationData">位置情報はここに表示されます.</p>
+    <p id="distance">移動距離: 0 メートル</p>
+    <p id="count">計測回数: 0 回</p>
+    <p id="mean">平均移動距離: 0 メートル</p>
+    <p id="meandistance">平均移動距離の累積: 0 メートル</p>
+    <button id="startButton">開始</button>
+    <button id="stopButton">停止</button>
+
+    <script>
+        var locationDataElement = document.getElementById("locationData");
+        var distanceElement = document.getElementById("distance");
+        var countElement = document.getElementById("count");
+        var meanElement = document.getElementById("mean");
+        var meandistanceElement = document.getElementById("meandistance");
+        var startButton = document.getElementById("startButton");
+        var stopButton = document.getElementById("stopButton");
+        var watchID = null; // 位置情報の監視ID
+        var lastPosition = null;
+        var totalDistance = 0; // 移動距離の累積
+        var totalcount = 0; // 移動距離測定回数
+        var totalmeanDistance = 0; // 平均移動距離の累積
+
+        function displayLocation(position) {
+            var latitude = position.coords.latitude;
+            var longitude = position.coords.longitude;
+            var accuracy = position.coords.accuracy;
+            var timestamp = new Date(position.timestamp).toLocaleString();
+
+            locationDataElement.innerHTML =
+                "緯度: " + latitude + "<br>経度: " + longitude + "<br>精度: " + accuracy + " メートル<br>取得時刻: " + timestamp;
+
+            // 移動距離を計算
+            if (lastPosition) {
+                var lastLat = lastPosition.coords.latitude;
+                var lastLng = lastPosition.coords.longitude;
+                var currentLat = position.coords.latitude;
+                var currentLng = position.coords.longitude;
+
+                var distance = calculateDistance(lastLat, lastLng, currentLat, currentLng);
+                var count = 1;
+                var mean = 0;
+                totalDistance += distance; // 移動距離を累積
+                totalcount += count; // 計測回数を累積
+                if (totalcount !== 0) {
+                    mean = totalDistance / totalcount; // 平均移動距離
+                }
+                if (totalcount > 50) {
+                    totalmeanDistance += mean; // 平均移動距離の累積
+                }
+                distanceElement.innerHTML = "移動距離: " + totalDistance.toFixed(2) + " メートル";
+                countElement.innerHTML = "計測回数: " + totalcount + "回";
+                meanElement.innerHTML = "平均移動距離: " + mean.toFixed(2) + "メートル";
+                meandistanceElement.innerHTML = "平均移動距離の累積" + totalmeanDistance.toFixed(2) + "メートル";
+            }
+
+            lastPosition = position;
+        }
+
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            var R = 6371; // Radius of the Earth in kilometers
+            var dLat = deg2rad(lat2 - lat1);
+            var dLon = deg2rad(lon2 - lon1);
+            var a =
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            var distance = R * c * 1000; // Convert to meters
+            return distance;
+        }
+
+        function deg2rad(deg) {
+            return deg * (Math.PI / 180);
+        }
+
+        function startLocationTracking() {
+            if ("geolocation" in navigator) {
+                // 位置情報の監視を開始
+                watchID = navigator.geolocation.watchPosition(displayLocation, function (error) {
+                    console.error("位置情報の取得に失敗しました: " + error.message);
+                }, { enableHighAccuracy: true }); // 高精度な位置情報を要求
+                startButton.disabled = true;
+                stopButton.disabled = false;
+            } else {
+                console.error("Geolocationがサポートされていません");
+            }
+        }
+
+        function stopLocationTracking() {
+            if (watchID !== null) {
+                // 位置情報の監視を停止
+                navigator.geolocation.clearWatch(watchID);
+                watchID = null;
+                startButton.disabled = false;
+                stopButton.disabled = true;
+            }
+        }
+
+        // 開始ボタンと停止ボタンのクリックイベント
+        startButton.addEventListener("click", startLocationTracking);
+        stopButton.addEventListener("click", stopLocationTracking);
+        stopButton.disabled = true;
+
+        // 15秒ごとに位置情報を更新
+        var updateInterval = 15000; // ミリ秒
+        setInterval(function () {
+            navigator.geolocation.getCurrentPosition(displayLocation, function (error) {
+                console.error("位置情報の取得に失敗しました: " + error.message);
+            }, { enableHighAccuracy: true });
+        }, updateInterval);
+    </script>
+</body>
+</html>
