@@ -107,14 +107,5 @@
         startButton.addEventListener("click", startLocationTracking);
         stopButton.addEventListener("click", stopLocationTracking);
         stopButton.disabled = true;
-
-        // 15秒ごとに位置情報を更新
-        var updateInterval = 15000; // ミリ秒
-        setInterval(function () {
-            navigator.geolocation.getCurrentPosition(displayLocation, function (error) {
-                console.error("位置情報の取得に失敗しました: " + error.message);
-            }, { enableHighAccuracy: true });
-        }, updateInterval);
     </script>
 </body>
-</html>
